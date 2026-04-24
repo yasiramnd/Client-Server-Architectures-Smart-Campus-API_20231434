@@ -25,7 +25,7 @@ public class DiscoveryResource {
         return new DiscoveryResponse(
                 "Smart Building Monitoring API",
                 "v1",
-                "kushan.bhareti@university.example",
+                "w2120184@westminster.ac.uk",
                 "/api/v1",
                 resources);
     }
