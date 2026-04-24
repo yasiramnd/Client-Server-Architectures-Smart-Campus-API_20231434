@@ -4,10 +4,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.coursework</groupId>
-    <artifactId>SmartBuildingMonitoringAPI</artifactId>
+    <artifactId>smart-campus-api</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>war</packaging>
-    <name>SmartBuildingMonitoringAPI</name>
+    <name>Smart Campus API</name>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -47,6 +47,7 @@
     </dependencies>
 
     <build>
+        <finalName>smart-campus-api</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

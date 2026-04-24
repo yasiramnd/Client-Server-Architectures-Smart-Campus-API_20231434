@@ -2,35 +2,33 @@ package com.coursework.api.model;
 
 public class SensorReading {
 
-    private int id;
-    private int sensorId;
+    private String id;
+    private long timestamp;
     private double value;
-    private String capturedAt;
 
     public SensorReading() {
     }
 
-    public SensorReading(int id, int sensorId, double value, String capturedAt) {
+    public SensorReading(String id, long timestamp, double value) {
         this.id = id;
-        this.sensorId = sensorId;
+        this.timestamp = timestamp;
         this.value = value;
-        this.capturedAt = capturedAt;
     }
 
-    public int getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(String id) {
         this.id = id;
     }
 
-    public int getSensorId() {
-        return sensorId;
+    public long getTimestamp() {
+        return timestamp;
     }
 
-    public void setSensorId(int sensorId) {
-        this.sensorId = sensorId;
+    public void setTimestamp(long timestamp) {
+        this.timestamp = timestamp;
     }
 
     public double getValue() {
@@ -39,13 +37,5 @@ public class SensorReading {
 
     public void setValue(double value) {
         this.value = value;
-    }
-
-    public String getCapturedAt() {
-        return capturedAt;
-    }
-
-    public void setCapturedAt(String capturedAt) {
-        this.capturedAt = capturedAt;
     }
 }

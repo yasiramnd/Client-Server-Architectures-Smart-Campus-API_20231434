@@ -2,35 +2,29 @@ package com.coursework.api.model;
 
 public class Sensor {
 
-    private int id;
-    private int roomId;
+    private String id;
     private String type;
+    private String status;
     private double currentValue;
+    private String roomId;
 
     public Sensor() {
     }
 
-    public Sensor(int id, int roomId, String type, double currentValue) {
+    public Sensor(String id, String type, String status, double currentValue, String roomId) {
         this.id = id;
-        this.roomId = roomId;
         this.type = type;
+        this.status = status;
         this.currentValue = currentValue;
+        this.roomId = roomId;
     }
 
-    public int getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(String id) {
         this.id = id;
-    }
-
-    public int getRoomId() {
-        return roomId;
-    }
-
-    public void setRoomId(int roomId) {
-        this.roomId = roomId;
     }
 
     public String getType() {
@@ -41,11 +35,27 @@ public class Sensor {
         this.type = type;
     }
 
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
     public double getCurrentValue() {
         return currentValue;
     }
 
     public void setCurrentValue(double currentValue) {
         this.currentValue = currentValue;
+    }
+
+    public String getRoomId() {
+        return roomId;
+    }
+
+    public void setRoomId(String roomId) {
+        this.roomId = roomId;
     }
 }

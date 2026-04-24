@@ -1,6 +1,6 @@
 package com.coursework.api.mapper;
 
-import com.coursework.api.exception.NotFoundException;
+import com.coursework.api.exception.LinkedResourceNotFoundException;
 import com.coursework.api.model.ErrorResponse;
 
 import javax.ws.rs.core.Context;
@@ -11,21 +11,21 @@ import javax.ws.rs.ext.Provider;
 import java.time.Instant;
 
 @Provider
-public class NotFoundExceptionMapper implements ExceptionMapper<NotFoundException> {
+public class LinkedResourceNotFoundExceptionMapper implements ExceptionMapper<LinkedResourceNotFoundException> {
 
     @Context
     private UriInfo uriInfo;
 
     @Override
-    public Response toResponse(NotFoundException exception) {
+    public Response toResponse(LinkedResourceNotFoundException exception) {
         ErrorResponse response = new ErrorResponse(
                 Instant.now().toString(),
-                Response.Status.NOT_FOUND.getStatusCode(),
-                Response.Status.NOT_FOUND.getReasonPhrase(),
+                422,
+                "Unprocessable Entity",
                 exception.getMessage(),
                 safePath());
 
-        return Response.status(Response.Status.NOT_FOUND)
+        return Response.status(422)
                 .entity(response)
                 .build();
     }

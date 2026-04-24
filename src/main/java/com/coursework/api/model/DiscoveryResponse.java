@@ -13,8 +13,7 @@ public class DiscoveryResponse {
     public DiscoveryResponse() {
     }
 
-    public DiscoveryResponse(String apiName, String version, String contact, String baseUrl,
-            Map<String, String> resources) {
+    public DiscoveryResponse(String apiName, String version, String contact, String baseUrl, Map<String, String> resources) {
         this.apiName = apiName;
         this.version = version;
         this.contact = contact;

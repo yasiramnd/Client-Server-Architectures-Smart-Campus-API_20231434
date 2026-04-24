@@ -1,29 +1,29 @@
 package com.coursework.api.model;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Room {
 
-    private int id;
+    private String id;
     private String name;
-    private String location;
-    private Set<Integer> sensorIds = new LinkedHashSet<>();
+    private int capacity;
+    private List<String> sensorIds = new ArrayList<String>();
 
     public Room() {
     }
 
-    public Room(int id, String name, String location) {
+    public Room(String id, String name, int capacity) {
         this.id = id;
         this.name = name;
-        this.location = location;
+        this.capacity = capacity;
     }
 
-    public int getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(String id) {
         this.id = id;
     }
 
@@ -35,19 +35,19 @@ public class Room {
         this.name = name;
     }
 
-    public String getLocation() {
-        return location;
+    public int getCapacity() {
+        return capacity;
     }
 
-    public void setLocation(String location) {
-        this.location = location;
+    public void setCapacity(int capacity) {
+        this.capacity = capacity;
     }
 
-    public Set<Integer> getSensorIds() {
+    public List<String> getSensorIds() {
         return sensorIds;
     }
 
-    public void setSensorIds(Set<Integer> sensorIds) {
+    public void setSensorIds(List<String> sensorIds) {
         this.sensorIds = sensorIds;
     }
 }

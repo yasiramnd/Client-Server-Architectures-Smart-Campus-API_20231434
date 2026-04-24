@@ -1,6 +1,6 @@
 package com.coursework.api.mapper;
 
-import com.coursework.api.exception.NotFoundException;
+import com.coursework.api.exception.RoomNotEmptyException;
 import com.coursework.api.model.ErrorResponse;
 
 import javax.ws.rs.core.Context;
@@ -11,21 +11,21 @@ import javax.ws.rs.ext.Provider;
 import java.time.Instant;
 
 @Provider
-public class NotFoundExceptionMapper implements ExceptionMapper<NotFoundException> {
+public class RoomNotEmptyExceptionMapper implements ExceptionMapper<RoomNotEmptyException> {
 
     @Context
     private UriInfo uriInfo;
 
     @Override
-    public Response toResponse(NotFoundException exception) {
+    public Response toResponse(RoomNotEmptyException exception) {
         ErrorResponse response = new ErrorResponse(
                 Instant.now().toString(),
-                Response.Status.NOT_FOUND.getStatusCode(),
-                Response.Status.NOT_FOUND.getReasonPhrase(),
+                Response.Status.CONFLICT.getStatusCode(),
+                Response.Status.CONFLICT.getReasonPhrase(),
                 exception.getMessage(),
                 safePath());
 
-        return Response.status(Response.Status.NOT_FOUND)
+        return Response.status(Response.Status.CONFLICT)
                 .entity(response)
                 .build();
     }

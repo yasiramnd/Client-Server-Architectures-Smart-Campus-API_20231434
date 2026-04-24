@@ -1,30 +1,31 @@
 package com.coursework.api.repository;
 
-import com.coursework.api.exception.ConflictException;
-import com.coursework.api.exception.ForbiddenOperationException;
+import com.coursework.api.exception.LinkedResourceNotFoundException;
 import com.coursework.api.exception.NotFoundException;
+import com.coursework.api.exception.RoomNotEmptyException;
+import com.coursework.api.exception.SensorUnavailableException;
 import com.coursework.api.exception.UnprocessableEntityException;
 import com.coursework.api.model.Room;
 import com.coursework.api.model.Sensor;
 import com.coursework.api.model.SensorReading;
-import java.time.Instant;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class InMemoryStore {
 
     private static final InMemoryStore INSTANCE = new InMemoryStore();
 
-    private final Map<Integer, Room> rooms = new LinkedHashMap<>();
-    private final Map<Integer, Sensor> sensors = new LinkedHashMap<>();
-    private final Map<Integer, List<SensorReading>> readingsBySensorId = new LinkedHashMap<>();
+    private final Map<String, Room> rooms = new LinkedHashMap<String, Room>();
+    private final Map<String, Sensor> sensors = new LinkedHashMap<String, Sensor>();
+    private final Map<String, List<SensorReading>> readingsBySensorId = new LinkedHashMap<String, List<SensorReading>>();
 
-    private final AtomicInteger roomIdCounter = new AtomicInteger(1);
-    private final AtomicInteger sensorIdCounter = new AtomicInteger(1);
-    private final AtomicInteger readingIdCounter = new AtomicInteger(1);
+    private final AtomicInteger roomSequence = new AtomicInteger(101);
+    private final AtomicInteger sensorSequence = new AtomicInteger(1);
 
     private InMemoryStore() {
         seedData();
@@ -35,16 +36,20 @@ public class InMemoryStore {
     }
 
     private synchronized void seedData() {
-        Room room = createRoom(new Room(0, "Server Room", "Level 2"));
-        Sensor sensor = createSensor(new Sensor(0, room.getId(), "temperature", 23.5));
-        addReading(sensor.getId(), new SensorReading(0, sensor.getId(), 23.5, Instant.now().toString()));
+        Room library = createRoom(new Room("LIB-301", "Library Quiet Study", 80));
+        Room lab = createRoom(new Room("LAB-101", "IoT Teaching Lab", 40));
+
+        createSensor(new Sensor("TEMP-001", "Temperature", "ACTIVE", 22.7, library.getId()));
+        Sensor maintenanceSensor = createSensor(new Sensor("CO2-001", "CO2", "MAINTENANCE", 0.0, lab.getId()));
+        addReading("TEMP-001", new SensorReading(null, System.currentTimeMillis(), 22.7));
+        readingsBySensorId.put(maintenanceSensor.getId(), new ArrayList<SensorReading>());
     }
 
     public synchronized List<Room> getAllRooms() {
-        return new ArrayList<>(rooms.values());
+        return new ArrayList<Room>(rooms.values());
     }
 
-    public synchronized Room getRoomById(int roomId) {
+    public synchronized Room getRoomById(String roomId) {
         Room room = rooms.get(roomId);
         if (room == null) {
             throw new NotFoundException("Room not found for id=" + roomId);
@@ -54,37 +59,41 @@ public class InMemoryStore {
 
     public synchronized Room createRoom(Room room) {
         validateRoomPayload(room);
-        int id = roomIdCounter.getAndIncrement();
-        Room newRoom = new Room(id, room.getName().trim(), room.getLocation().trim());
+        String id = normalizeOrGenerateRoomId(room.getId());
+        if (rooms.containsKey(id)) {
+            throw new UnprocessableEntityException("Room id already exists: " + id);
+        }
+
+        Room newRoom = new Room(id, room.getName().trim(), room.getCapacity());
         rooms.put(id, newRoom);
         return newRoom;
     }
 
-    public synchronized void deleteRoom(int roomId) {
+    public synchronized void deleteRoom(String roomId) {
         Room room = getRoomById(roomId);
         if (!room.getSensorIds().isEmpty()) {
-            throw new ConflictException("Cannot delete room " + roomId + " because it still has sensors.");
+            throw new RoomNotEmptyException("Cannot delete room " + roomId + " because sensors are still assigned to it.");
         }
         rooms.remove(roomId);
     }
 
     public synchronized List<Sensor> getAllSensors(String type) {
-        List<Sensor> all = new ArrayList<>(sensors.values());
+        List<Sensor> allSensors = new ArrayList<Sensor>(sensors.values());
         if (type == null || type.trim().isEmpty()) {
-            return all;
+            return allSensors;
         }
 
-        List<Sensor> filtered = new ArrayList<>();
-        String expected = type.trim().toLowerCase();
-        for (Sensor sensor : all) {
-            if (sensor.getType() != null && sensor.getType().toLowerCase().equals(expected)) {
+        List<Sensor> filtered = new ArrayList<Sensor>();
+        String expectedType = type.trim().toLowerCase();
+        for (Sensor sensor : allSensors) {
+            if (sensor.getType() != null && sensor.getType().toLowerCase().equals(expectedType)) {
                 filtered.add(sensor);
             }
         }
         return filtered;
     }
 
-    public synchronized Sensor getSensorById(int sensorId) {
+    public synchronized Sensor getSensorById(String sensorId) {
         Sensor sensor = sensors.get(sensorId);
         if (sensor == null) {
             throw new NotFoundException("Sensor not found for id=" + sensorId);
@@ -96,65 +105,51 @@ public class InMemoryStore {
         validateSensorPayload(sensor);
         Room room = rooms.get(sensor.getRoomId());
         if (room == null) {
-            throw new UnprocessableEntityException("Cannot register sensor. roomId="
-                    + sensor.getRoomId() + " does not exist.");
+            throw new LinkedResourceNotFoundException("Cannot register sensor. roomId=" + sensor.getRoomId() + " does not exist.");
         }
 
-        int id = sensorIdCounter.getAndIncrement();
-        Sensor newSensor = new Sensor(id, sensor.getRoomId(), sensor.getType().trim().toLowerCase(), sensor.getCurrentValue());
-        sensors.put(id, newSensor);
+        String id = normalizeOrGenerateSensorId(sensor.getId());
+        if (sensors.containsKey(id)) {
+            throw new UnprocessableEntityException("Sensor id already exists: " + id);
+        }
 
+        String status = normalizeStatus(sensor.getStatus());
+        Sensor newSensor = new Sensor(id, sensor.getType().trim(), status, sensor.getCurrentValue(), sensor.getRoomId());
+        sensors.put(id, newSensor);
         room.getSensorIds().add(id);
         readingsBySensorId.put(id, new ArrayList<SensorReading>());
         return newSensor;
     }
 
-    public synchronized void deleteSensor(int sensorId) {
-        Sensor sensor = getSensorById(sensorId);
-        List<SensorReading> history = readingsBySensorId.get(sensorId);
-        if (history != null && !history.isEmpty()) {
-            throw new ForbiddenOperationException("Deletion blocked. Sensor " + sensorId
-                    + " has reading history and is protected.");
-        }
-
-        sensors.remove(sensorId);
-        readingsBySensorId.remove(sensorId);
-
-        Room room = rooms.get(sensor.getRoomId());
-        if (room != null) {
-            room.getSensorIds().remove(sensorId);
-        }
-    }
-
-    public synchronized List<SensorReading> getReadingsForSensor(int sensorId) {
+    public synchronized List<SensorReading> getReadingsForSensor(String sensorId) {
         getSensorById(sensorId);
         List<SensorReading> readings = readingsBySensorId.get(sensorId);
         if (readings == null) {
             return new ArrayList<SensorReading>();
         }
-        return new ArrayList<>(readings);
+        return new ArrayList<SensorReading>(readings);
     }
 
-    public synchronized SensorReading addReading(int sensorId, SensorReading reading) {
+    public synchronized SensorReading addReading(String sensorId, SensorReading reading) {
         Sensor sensor = getSensorById(sensorId);
+        if ("MAINTENANCE".equalsIgnoreCase(sensor.getStatus())) {
+            throw new SensorUnavailableException("Sensor " + sensorId + " is in MAINTENANCE mode and cannot accept new readings.");
+        }
         if (reading == null) {
             throw new UnprocessableEntityException("Reading payload is required.");
         }
 
-        int id = readingIdCounter.getAndIncrement();
-        String capturedAt = reading.getCapturedAt() == null || reading.getCapturedAt().trim().isEmpty()
-                ? Instant.now().toString()
-                : reading.getCapturedAt();
-
-        SensorReading newReading = new SensorReading(id, sensorId, reading.getValue(), capturedAt);
+        SensorReading newReading = new SensorReading(
+                reading.getId() == null || reading.getId().trim().isEmpty() ? UUID.randomUUID().toString() : reading.getId().trim(),
+                reading.getTimestamp() <= 0 ? System.currentTimeMillis() : reading.getTimestamp(),
+                reading.getValue());
 
         List<SensorReading> readings = readingsBySensorId.get(sensorId);
         if (readings == null) {
-            readings = new ArrayList<>();
+            readings = new ArrayList<SensorReading>();
             readingsBySensorId.put(sensorId, readings);
         }
         readings.add(newReading);
-
         sensor.setCurrentValue(newReading.getValue());
         return newReading;
     }
@@ -166,8 +161,8 @@ public class InMemoryStore {
         if (room.getName() == null || room.getName().trim().isEmpty()) {
             throw new UnprocessableEntityException("Room name is required.");
         }
-        if (room.getLocation() == null || room.getLocation().trim().isEmpty()) {
-            throw new UnprocessableEntityException("Room location is required.");
+        if (room.getCapacity() <= 0) {
+            throw new UnprocessableEntityException("Room capacity must be greater than zero.");
         }
     }
 
@@ -178,8 +173,33 @@ public class InMemoryStore {
         if (sensor.getType() == null || sensor.getType().trim().isEmpty()) {
             throw new UnprocessableEntityException("Sensor type is required.");
         }
-        if (sensor.getRoomId() <= 0) {
-            throw new UnprocessableEntityException("roomId must be a positive integer.");
+        if (sensor.getRoomId() == null || sensor.getRoomId().trim().isEmpty()) {
+            throw new UnprocessableEntityException("roomId is required.");
         }
+    }
+
+    private String normalizeOrGenerateRoomId(String roomId) {
+        if (roomId == null || roomId.trim().isEmpty()) {
+            return String.format("ROOM-%03d", roomSequence.getAndIncrement());
+        }
+        return roomId.trim().toUpperCase();
+    }
+
+    private String normalizeOrGenerateSensorId(String sensorId) {
+        if (sensorId == null || sensorId.trim().isEmpty()) {
+            return String.format("SENSOR-%03d", sensorSequence.getAndIncrement());
+        }
+        return sensorId.trim().toUpperCase();
+    }
+
+    private String normalizeStatus(String status) {
+        if (status == null || status.trim().isEmpty()) {
+            return "ACTIVE";
+        }
+        String normalized = status.trim().toUpperCase();
+        if (!"ACTIVE".equals(normalized) && !"MAINTENANCE".equals(normalized) && !"OFFLINE".equals(normalized)) {
+            throw new UnprocessableEntityException("Sensor status must be ACTIVE, MAINTENANCE, or OFFLINE.");
+        }
+        return normalized;
     }
 }

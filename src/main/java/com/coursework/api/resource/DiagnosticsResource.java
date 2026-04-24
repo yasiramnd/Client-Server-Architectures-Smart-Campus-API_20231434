@@ -9,6 +9,6 @@ public class DiagnosticsResource {
     @GET
     @Path("/crash")
     public String triggerCrash() {
-        throw new IllegalStateException("Demonstration failure to validate global mapper.");
+        throw new IllegalStateException("Intentional test failure for global exception mapping.");
     }
 }

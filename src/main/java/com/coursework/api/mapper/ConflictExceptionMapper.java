@@ -2,12 +2,13 @@ package com.coursework.api.mapper;
 
 import com.coursework.api.exception.ConflictException;
 import com.coursework.api.model.ErrorResponse;
-import java.time.Instant;
+
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
+import java.time.Instant;
 
 @Provider
 public class ConflictExceptionMapper implements ExceptionMapper<ConflictException> {
@@ -22,10 +23,14 @@ public class ConflictExceptionMapper implements ExceptionMapper<ConflictExceptio
                 Response.Status.CONFLICT.getStatusCode(),
                 Response.Status.CONFLICT.getReasonPhrase(),
                 exception.getMessage(),
-                uriInfo.getPath());
+                safePath());
 
         return Response.status(Response.Status.CONFLICT)
                 .entity(response)
                 .build();
+    }
+
+    private String safePath() {
+        return uriInfo == null ? "" : uriInfo.getPath();
     }
 }
